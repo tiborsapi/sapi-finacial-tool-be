@@ -7,8 +7,12 @@ pub async fn connect(database_url: &str) -> Result<Pool<Postgres>> {
 }
 
 pub async fn migrate(pool: &Pool<Postgres>) -> Result<()> {
-    sqlx::raw_sql(include_str!("../../migrations/0001_create_incomes.sql"))
-        .execute(pool)
-        .await?;
+    // Idempotent scripts (IF NOT EXISTS), applied in order on every startup.
+    for script in [
+        include_str!("../../migrations/0001_create_incomes.sql"),
+        include_str!("../../migrations/0002_create_expenses.sql"),
+    ] {
+        sqlx::raw_sql(script).execute(pool).await?;
+    }
     Ok(())
 }

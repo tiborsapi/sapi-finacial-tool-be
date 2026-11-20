@@ -3,8 +3,6 @@ mod config;
 mod db;
 
 use anyhow::Result;
-use axum::{routing::get, Router};
-use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::config::Settings;
@@ -23,11 +21,7 @@ async fn main() -> Result<()> {
     let pool = db::connect(&settings.database_url).await?;
     db::migrate(&pool).await?;
 
-    let app = Router::new()
-        .merge(api::incomes::router())
-        .route("/health", get(api::health::health_check))
-        .layer(TraceLayer::new_for_http())
-        .with_state(pool);
+    let app = api::app(pool);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", settings.port)).await?;
     tracing::info!("Server listening on http://0.0.0.0:{}", settings.port);
